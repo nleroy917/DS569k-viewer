@@ -2,14 +2,11 @@
 # https://github.com/wukevin/proteinclip/blob/main/proteinclip/esm_wrapper.py
 # https://github.com/wukevin/proteinclip/blob/main/proteinclip/model_utils.py
 # https://github.com/wukevin/proteinclip/blob/main/proteinclip/gpt.py
-from __future__ import annotations
 import esm
 import torch.nn as nn
 import torch
 import numpy as np
-from functools import lru_cache
 
-from pathlib import Path
 
 ESM_CALLABLES = {
     48: esm.pretrained.esm2_t48_15B_UR50D,
@@ -21,15 +18,41 @@ ESM_CALLABLES = {
 }
 
 
-@lru_cache(maxsize=2)
 def get_model(model_size: int) -> tuple[nn.Module, esm.Alphabet]:
-    """Return model and alphabet for a given model size."""
+    """
+    Return model and alphabet for a given model size.
+
+    Args:
+        model_size (int): size of the ESM model to load. Must be one of
+            [6, 12, 30, 33, 36, 48].
+    Returns:
+        tuple[nn.Module, esm.Alphabet]: the ESM model and alphabet.
+    """
     model, alphabet = ESM_CALLABLES[model_size]()
     model.eval()
     return model, alphabet
 
 
-def batch_embed_sequence(batch, model, alphabet, embed_layer=5, device="cpu"):
+def batch_embed_sequence(
+    batch: list[str],
+    model: nn.Module,
+    alphabet: esm.Alphabet,
+    embed_layer: int = 5,
+    device: str = "cpu"
+):
+    """
+    Embed a batch of sequences using the given model and alphabet.
+    
+    Args:
+        batch (list[str]): list of sequences to embed.
+        model (nn.Module): the ESM model to use for embedding.
+        alphabet (esm.Alphabet): the ESM alphabet to use for embedding.
+        embed_layer (int, optional): the layer to use for embedding. Defaults to 5.
+        device (str, optional): the device to use for embedding. Defaults to "cpu".
+
+    Returns:
+        list[np.ndarray]: list of embeddings for each sequence in the batch.
+    """
     batch_converter = alphabet.get_batch_converter()
 
     _, _, tokens = batch_converter(
@@ -51,7 +74,13 @@ def batch_embed_sequence(batch, model, alphabet, embed_layer=5, device="cpu"):
     return reprs
 
 
-def embed_sequence(sequence, model, alphabet, embed_layer=5, device="cpu"):
+def embed_sequence(
+    sequence: str,
+    model: nn.Module,
+    alphabet: esm.Alphabet,
+    embed_layer: int = 5,
+    device: str = "cpu"
+):
     batch_converter = alphabet.get_batch_converter()
 
     _, _, tokens = batch_converter([("", sequence.replace("*", "<mask>"))])
@@ -92,19 +121,25 @@ class ONNXModel:
         return self.model.run(None, {"input": x})[0]
 
 
-@lru_cache(maxsize=2)
-def load_proteinclip(model_path="proteinclip_esm2_6.onnx") -> ONNXModel:
+def load_proteinclip(model_path: str = "proteinclip_esm2_6.onnx") -> ONNXModel:
     return ONNXModel(model_path)
 
-
-def embed_proteinclip(seq, esm2, alphabet, pclip, layer=6, device="cpu"):
+    
+def embed_proteinclip(
+    seq: str,
+    esm2: nn.Module,
+    alphabet: esm.Alphabet,
+    pclip: ONNXModel,
+    layer: int = 6,
+    device: str ="cpu"
+):
     esm_repr = embed_sequence(seq, esm2, alphabet, layer, device)
     esm_repr /= np.linalg.norm(esm_repr)
     pclip_repr = pclip.predict(esm_repr)
     return pclip_repr
 
 
-def embed_proteinclip_6(seq, device="cpu"):
+def embed_proteinclip_6(seq: str, device: str = "cpu"):
     size = 6
     esm2, alphabet = get_model(size)
     pclip = load_proteinclip(f"src/proteinclip_esm2_{size}.onnx")
