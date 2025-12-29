@@ -8,7 +8,8 @@ export { OpenAPI } from './core/OpenAPI';
 export type { OpenAPIConfig } from './core/OpenAPI';
 
 export type { HTTPValidationError } from './models/HTTPValidationError';
-export type { ProteinData } from './models/ProteinData';
+export type { ProteinHit } from './models/ProteinHit';
+export type { SearchResponse } from './models/SearchResponse';
 export type { SimilarityQuery } from './models/SimilarityQuery';
 export type { TaxonomyInfo } from './models/TaxonomyInfo';
 export type { ValidationError } from './models/ValidationError';

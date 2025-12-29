@@ -12,8 +12,25 @@ class TaxonomyInfo(CamelModel):
     classes: list[str]
     phyla: list[str]
 
+
 class SimilarityQuery(CamelModel):
     sequence: str
     top_k: int
     class_filters: list[str] | None = None
     phylum_filters: list[str] | None = None
+
+
+class ProteinHit(CamelModel):
+    score: float
+    accession: str | None = None
+    protein_name: str | None = None
+    organism_name: str | None = None
+    sequence_length: int | None = None
+    ncbi_taxonomy_class: str | None = None
+    ncbi_taxonomy_phylum: str | None = None
+    function: str | None = None
+
+
+class SearchResponse(CamelModel):
+    hits: list[ProteinHit]
+    total: int

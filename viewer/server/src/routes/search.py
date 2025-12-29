@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Request, HTTPException
 from qdrant_client.http.models import Filter, FieldCondition, MatchAny
 
-from models import SimilarityQuery
+from models import SimilarityQuery, SearchResponse, ProteinHit
 from embed_proteinclip import embed_proteinclip
 from utils import validate_protein_sequence
 from config import QDRANT_COLLECTION_NAME
@@ -9,7 +9,7 @@ from config import QDRANT_COLLECTION_NAME
 router = APIRouter()
 
 
-@router.post("/search")
+@router.post("/search", response_model=SearchResponse)
 def compute_similarity(body: SimilarityQuery, request: Request):
     # validate the protein sequence
     is_valid, error_msg = validate_protein_sequence(body.sequence)
@@ -72,18 +72,18 @@ def compute_similarity(body: SimilarityQuery, request: Request):
             detail=f"Failed to query vector database: {str(e)}"
         )
     
-    hits = [{
-        "score": point.score,
-        "accession": point.payload.get("accession"),
-        "protein_name": point.payload.get("protein_name"),
-        "organism_name": point.payload.get("organism_name"),
-        "sequence_length": point.payload.get("sequence_length"),
-        "ncbi_taxonomy_class": point.payload.get("ncbi_taxonomy_class"),
-        "ncbi_taxonomy_phylum": point.payload.get("ncbi_taxonomy_phylum"),
-        "function": point.payload.get("function"),
-    } for point in results.points]
+    hits = [
+        ProteinHit(
+            score=point.score,
+            accession=point.payload.get("accession"),
+            protein_name=point.payload.get("protein_name"),
+            organism_name=point.payload.get("organism_name"),
+            sequence_length=point.payload.get("sequence_length"),
+            ncbi_taxonomy_class=point.payload.get("ncbi_taxonomy_class"),
+            ncbi_taxonomy_phylum=point.payload.get("ncbi_taxonomy_phylum"),
+            function=point.payload.get("function"),
+        )
+        for point in results.points
+    ]
 
-    return {
-        "hits": hits,
-        "total": len(hits),
-    }
+    return SearchResponse(hits=hits, total=len(hits))

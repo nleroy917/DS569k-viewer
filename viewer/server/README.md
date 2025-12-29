@@ -1,21 +1,13 @@
-To runthe server, use:
+To run the server, use:
+
 ```
 uvicorn src.server:app --host --reload
-```     
-
-
-```python
-class SimilarityQuery(CamelModel):
-    sequence: str
-    top_k: int
-    class_filters: list[str] | None = None
-    phylum_filters: list[str] | None = None
 ```
 
 An example curl request to the search endpoint:
 
 ```bash
-curl -X 'POST' \
+time curl -X 'POST' \
   'http://localhost:8000/search' \
   -H 'accept: application/json' \
   -H 'Content-Type: application/json' \

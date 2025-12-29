@@ -1,19 +1,18 @@
 <script lang="ts">
 	import "./app.css";
 	import Header from "./components/Header.svelte";
-	import { Backend, type ProteinData, type TaxonomyInfo } from "./backend";
+	import { Backend, type SearchResponse, type TaxonomyInfo } from "./backend";
 	import { onMount } from "svelte";
 	import { Button, Textarea } from "flowbite-svelte";
 	import {
 		ArrowUpRightFromSquareOutline,
-		ArrowUpRightFromSquareSolid,
 	} from "flowbite-svelte-icons";
 	import Select from "svelte-select";
 
 	let sequence = `MMITFQCLIGILLIANNLAFDICKASNPRFCKCQSHSKMQCGSFEVTTNTINNLIIKCSMKSDVNEISKIFLNVIEGENIDTAEVILENCLIVHDFNWYLPIFIVSGRELPFWLTISKRYEVYLYYLRAIETLESLTLSMINTLVIGSKAFDINPYLKTLRIKNNNFVKLDAKNPFWGLHNLEILEISKNKKVVFGREPFFLLPKLKILYLDNNNLESIPDKLFFGLDSLTDLVLSGNRIKSLTDESFFGLIMSLKRIDLKGNRLQKTEIDKIHKYFGDEFILIDY`;
 	let topK = 100;
-	let results: ProteinData;
-	let topKIdxs: number[];
+	let results: SearchResponse;
+	let searchTimeMs: number;
 
 	type SelectItem = { value: string; label: string; taxonomy: string };
 	let items: SelectItem[] = [];
@@ -41,13 +40,16 @@
 		}
 
 		console.log(classFilters, phylumFilters);
+
+		const startTime = performance.now();
 		results = await Backend.computeSimilarity({
 			sequence: sequence.toUpperCase(),
 			topK,
 			classFilters,
 			phylumFilters,
 		});
-		topKIdxs = sortedIdxs(results);
+		const endTime = performance.now();
+		searchTimeMs = endTime - startTime;
 	}
 
 	onMount(async () => {
@@ -63,12 +65,6 @@
 		const l = s.toUpperCase();
 		const validAA = new Set("*ACDEFGHIKLMNPQRSTVWY");
 		return Array.from(l).every((d) => validAA.has(d));
-	}
-
-	function sortedIdxs(results: ProteinData) {
-		const s = results.similarity.map((d, i) => [d, i]);
-		const sorted = s.sort((a, b) => b[0] - a[0]);
-		return sorted.map((d) => d[1]);
 	}
 
 	function parseTax(t: TaxonomyInfo) {
@@ -125,49 +121,44 @@
 		</Button>
 	</div>
 	{#if results}
+		<div class="mb-5" style="color: grey;">
+			<b>{results.total}</b> results found in <b>{searchTimeMs.toFixed(0)}</b> ms
+		</div>
 		<div class="flex gap-5 flex-wrap">
-			{#each topKIdxs as i}
-				{@const accession = results.accession[i]}
-				{@const similarity = results.similarity[i]}
-				{@const proteinName = results.proteinName[i]}
-				{@const organismName = results.organismName[i]}
-				{@const sequenceLength = results.sequenceLength[i]}
-				{@const taxonomyClass = results.ncbiTaxonomyClass[i]}
-				{@const taxonomyPhylum = results.ncbiTaxonomyPhylum[i]}
-				{@const _function = results.function[i]}
+			{#each results.hits as hit}
 				<div class="protein">
 					<div>
 						<div class="title">
 							<Button
 								size="xs"
-								href="https://www.uniprot.org/uniprotkb/{accession}/entry"
+								href="https://www.uniprot.org/uniprotkb/{hit.accession}/entry"
 								target="_blank"
 								outline
-								>{accession}
+								>{hit.accession}
 								<ArrowUpRightFromSquareOutline
 									size="xs"
 									class="ml-1"
 								/></Button
 							>
-							{proteinName}
+							{hit.proteinName}
 						</div>
 						<div style="color: grey">
-							<div><b>Organism:</b> {organismName}</div>
-							<div><b>Class:</b> {taxonomyClass ?? "-"}</div>
-							<div><b>Phylum:</b> {taxonomyPhylum ?? "-"}</div>
+							<div><b>Organism:</b> {hit.organismName}</div>
+							<div><b>Class:</b> {hit.ncbiTaxonomyClass ?? "-"}</div>
+							<div><b>Phylum:</b> {hit.ncbiTaxonomyPhylum ?? "-"}</div>
 							<div>
 								<b>Sequence Length:</b>
-								{sequenceLength}
+								{hit.sequenceLength}
 							</div>
 							<div>
 								<b>Cosine Similarity:</b>
-								{similarity.toFixed(2)}
+								{hit.score.toFixed(2)}
 							</div>
 							<div
 								style="max-height: 100px; overflow-y: scroll; "
 							>
 								<b>Function:</b>
-								{_function}
+								{hit.function}
 							</div>
 						</div>
 						<div></div>
@@ -176,7 +167,7 @@
 			{/each}
 		</div>
 		<div class="flex justify-center m-5">
-			{#if results && results.sequenceLength.length % 100 === 0}
+			{#if results && results.hits.length % 100 === 0}
 				<Button
 					color="alternative"
 					on:click={async () => {
