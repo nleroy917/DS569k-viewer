@@ -1,15 +1,14 @@
-from fastapi import APIRouter
-
-from datasets import load_dataset
+from fastapi import APIRouter, Request
 
 from models import TaxonomyInfo
 
 router = APIRouter()
 
-ds = load_dataset("donnyb/DS569k")['train'].to_polars()
-classes = ds.select("ncbi_taxonomy_class").drop_nulls().unique().to_series().to_list()
-phyla = ds.select("ncbi_taxonomy_phylum").drop_nulls().unique().to_series().to_list()
 
 @router.get("/taxonomy-info", response_model=TaxonomyInfo)
-def taxonomy_info():
-    return TaxonomyInfo(phyla=phyla, classes=classes)
+def taxonomy_info(request: Request):
+    """Get available taxonomy classes and phyla for filtering."""
+    return TaxonomyInfo(
+        phyla=request.app.state.taxonomy_phyla,
+        classes=request.app.state.taxonomy_classes
+    )

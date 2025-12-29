@@ -131,16 +131,23 @@ def embed_proteinclip(
     alphabet: esm.Alphabet,
     pclip: ONNXModel,
     layer: int = 6,
-    device: str ="cpu"
-):
+    device: str = "cpu"
+) -> np.ndarray:
+    """
+    Embed a protein sequence using ESM2 + ProteinCLIP.
+
+    Args:
+        seq (str): protein sequence to embed.
+        esm2 (nn.Module): pre-loaded ESM2 model.
+        alphabet (esm.Alphabet): ESM2 alphabet.
+        pclip (ONNXModel): pre-loaded ProteinCLIP model.
+        layer (int, optional): ESM2 layer to extract embeddings from. Defaults to 6.
+        device (str, optional): device to use for embedding. Defaults to "cpu".
+
+    Returns:
+        np.ndarray: ProteinCLIP embedding vector.
+    """
     esm_repr = embed_sequence(seq, esm2, alphabet, layer, device)
     esm_repr /= np.linalg.norm(esm_repr)
     pclip_repr = pclip.predict(esm_repr)
     return pclip_repr
-
-
-def embed_proteinclip_6(seq: str, device: str = "cpu"):
-    size = 6
-    esm2, alphabet = get_model(size)
-    pclip = load_proteinclip(f"src/proteinclip_esm2_{size}.onnx")
-    return embed_proteinclip(seq, esm2, alphabet, pclip, size, device)
