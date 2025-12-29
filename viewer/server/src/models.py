@@ -17,14 +17,3 @@ class SimilarityQuery(CamelModel):
     top_k: int
     class_filters: list[str] | None = None
     phylum_filters: list[str] | None = None
-
-
-class ProteinData(CamelModel):
-    accession: list[str]
-    protein_name: list[str]
-    organism_name: list[str]
-    sequence_length: list[int]
-    ncbi_taxonomy_class: list[str | None]
-    ncbi_taxonomy_phylum: list[str | None]
-    similarity: list[float]
-    function: list[str | None]

@@ -23,6 +23,19 @@ if not client.collection_exists("proteins"):
         }, # size and distance are model dependent
     )
 
+client.create_payload_index(
+    collection_name="proteins",
+    field_name="ncbi_taxonomy_class",
+    field_schema="keyword",
+)
+
+client.create_payload_index(
+    collection_name="proteins",
+    field_name="ncbi_taxonomy_phylum",
+    field_schema="keyword",
+)
+
+
 df = load_dataset("donnyb/DS569k")['train'].to_polars()
 
 def generate_points_in_batches(
