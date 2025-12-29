@@ -128,18 +128,21 @@
 			{#each results.hits as hit}
 				<div class="protein">
 					<div>
-						<div class="title">
+						<div class="title flex flex-col">
+							<div class="flex flex-row">
 							<Button
 								size="xs"
 								href="https://www.uniprot.org/uniprotkb/{hit.accession}/entry"
 								target="_blank"
 								outline
-								>{hit.accession}
+								>
+								{hit.accession}
 								<ArrowUpRightFromSquareOutline
 									size="xs"
 									class="ml-1"
-								/></Button
-							>
+								/>
+							</Button>
+						</div>
 							{hit.proteinName}
 						</div>
 						<div style="color: grey">
